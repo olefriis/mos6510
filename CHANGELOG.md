@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.1.2
+Bumped versions of mini_racer so we can run on Ruby 3.1. Also bumped rspec.
+
 ## 0.1.1
 Bumped version of mini_racer, as 0.2.6 doesn't want to compile and install on my Mac.
 
