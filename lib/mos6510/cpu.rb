@@ -2,50 +2,77 @@ require 'mini_racer'
 
 module Mos6510
   class Cpu
-    def initialize(sid: nil)
-      @context = MiniRacer::Context.new
+    attr_reader :use_javascript_adapter
 
-      # Just define the name space used by the main mos6510 emulator
-      @context.eval 'function jsSID() {}'
+    def initialize(sid: nil, use_javascript_adapter: true)
+      @use_javascript_adapter = use_javascript_adapter
 
-      @context.load(File.join(__dir__, 'jssid.mos6510.js'))
+      if use_javascript_adapter
+        @context = MiniRacer::Context.new
 
-      @context.eval <<~EOS
-        var memory = new Array(65536);
-		    for(var i=0; i<65536; i++) {
-			    memory[i]=0;
-		    }
-        var sid = null;
-      EOS
+        # Just define the name space used by the main mos6510 emulator
+        @context.eval 'function jsSID() {}'
 
-      if sid
-        @context.attach("sidPoke", proc{ |address, value| sid.poke(address, value) })
+        @context.load(File.join(__dir__, 'jssid.mos6510.js'))
+
         @context.eval <<~EOS
-          sid = {
-            poke: function(address, value) { sidPoke(address, value); }
-          };
+          var memory = new Array(65536);
+          for(var i=0; i<65536; i++) {
+            memory[i]=0;
+          }
+          var sid = null;
         EOS
+
+        if sid
+          @context.attach("sidPoke", proc{ |address, value| sid.poke(address, value) })
+          @context.eval <<~EOS
+            sid = {
+              poke: function(address, value) { sidPoke(address, value); }
+            };
+          EOS
+        end
+      else
+        @memory = [0] * 65536
+        @sid = sid
       end
     end
 
     def load(bytes, from: 0)
-      bytes.each_with_index do |byte, index|
-        @context.eval "memory[#{from + index}] = #{byte};"
+      if use_javascript_adapter
+        bytes.each_with_index do |byte, index|
+          @context.eval "memory[#{from + index}] = #{byte};"
+        end
+      else
+        bytes.each_with_index do |byte, index|
+          @memory[from + index] = byte
+        end
       end
     end
 
     def start
-      @context.eval <<~EOS
-        var cpu = new jsSID.MOS6510(memory, sid);
-      EOS
+      if use_javascript_adapter
+        @context.eval <<~EOS
+          var cpu = new jsSID.MOS6510(memory, sid);
+        EOS
+      else
+        @cpu = Mos6510.new(@memory, sid: @sid)
+      end
     end
 
     def jsr(address, accumulator_value=0)
-      @context.eval "cpu.cpuJSR(#{address}, #{accumulator_value});"
+      if use_javascript_adapter
+        @context.eval "cpu.cpuJSR(#{address}, #{accumulator_value});"
+      else
+        @cpu.cpuJSR(address, accumulator_value)
+      end
     end
 
     def peek(address)
-      @context.eval "cpu.mem[#{address}]"
+      if use_javascript_adapter
+        @context.eval "cpu.mem[#{address}]"
+      else
+        @memory[address]
+      end
     end
   end
 end

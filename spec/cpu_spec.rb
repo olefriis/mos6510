@@ -7,7 +7,7 @@ module Mos6510
           *store_accumulator_at_address(4000),
           *return_from_subroutine
       ]
-      cpu = Cpu.new
+      cpu = Cpu.new(use_javascript_adapter: false)
       cpu.load(code, from: 1000)
 
       cpu.start
@@ -24,7 +24,7 @@ module Mos6510
           *return_from_subroutine
       ]
       sid = double('sid')
-      cpu = Cpu.new(sid: sid)
+      cpu = Cpu.new(sid: sid, use_javascript_adapter: false)
       cpu.load(code, from: 1000)
 
       expect(sid).to receive(:poke).with(2, 117)
