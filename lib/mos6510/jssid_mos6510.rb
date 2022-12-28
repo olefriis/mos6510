@@ -45,7 +45,6 @@ module Mos6510
 		end
 
 		def getaddr(mode)
-			ad, ad2 = nil
 			case mode
 			when Mode::IMP
 				self.cycles += 2
@@ -120,7 +119,6 @@ module Mos6510
 		end
 
 		def setaddr(mode, val)
-			ad, ad2 = nil
 			# FIXME: not checking pc addresses as all should be relative to a valid instruction
 			case mode
 			when Mode::ABS
@@ -159,7 +157,6 @@ module Mos6510
 		end
 
 		def putaddr(mode, val)
-			ad, ad2 = nil
 			case mode
 			when Mode::ABS
 				self.cycles += 4
@@ -208,7 +205,7 @@ module Mos6510
 				ad = self.getmem(self.pcinc())
 				ad += self.x
 				ad2 = self.getmem(ad & 0xff)
-				ad++
+				ad += 1
 				ad2 |= self.getmem(ad & 0xff) << 8
 				self.setmem(ad2, val)
 				return
@@ -239,7 +236,7 @@ module Mos6510
 
 		def push(val)
 			self.setmem(0x100 + self.s, val)
-			if (self.s)
+			if self.s > 0
 				self.s -= 1
 			end
 		end
@@ -252,7 +249,7 @@ module Mos6510
 		end
 
 		def branch(flag)
-			var dist = self.getaddr(Mode::IMM)
+			dist = self.getaddr(Mode::IMM)
 			# FIXME: while this was checked out, it still seems too complicated
 			# make signed
 			if dist & 0x80 != 0
@@ -299,26 +296,24 @@ module Mos6510
 			cmd = OPCODES[opc][0]
 			addr = OPCODES[opc][1]
 
-			puts "cmd: #{cmd} addr: #{addr}"
-
 			case cmd
 			when Inst::ADC
 				self.wval = self.a + self.getaddr(addr) + ((self.p & Flag::C) != 0 ? 1 : 0)
 				self.setflags(Flag::C, self.wval & 0x100)
 				self.a = self.wval & 0xff
-				self.setflags(Flag::Z, !self.a)
+				self.setflags(Flag::Z, self.a == 0)
 				self.setflags(Flag::N, self.a & 0x80)
 				self.setflags(Flag::V, ((self.p & Flag::C) != 0 ? 1 : 0) ^ ((self.p & Flag::N) != 0 ? 1 : 0))
 			when Inst::AND
 				self.bval = self.getaddr(addr)
 				self.a &= self.bval
-				self.setflags(Flag::Z, !self.a)
+				self.setflags(Flag::Z, self.a == 0)
 				self.setflags(Flag::N, self.a & 0x80)
 			when Inst::ASL
 				self.wval = self.getaddr(addr)
 				self.wval <<= 1
 				self.setaddr(addr, self.wval & 0xff)
-				self.setflags(Flag::Z, !self.wval)
+				self.setflags(Flag::Z, self.wval == 0)
 				self.setflags(Flag::N, self.wval & 0x80)
 				self.setflags(Flag::C, self.wval & 0x100)
 			when Inst::BCC
@@ -339,7 +334,7 @@ module Mos6510
 				self.branch(self.p & Flag::V != 0)
 			when Inst::BIT
 				self.bval = self.getaddr(addr)
-				self.setflags(Flag::Z, !(self.a & self.bval))
+				self.setflags(Flag::Z, (self.a & self.bval) == 0)
 				self.setflags(Flag::N, self.bval & 0x80)
 				self.setflags(Flag::V, self.bval & 0x40)
 			when Inst::BRK
@@ -370,7 +365,7 @@ module Mos6510
 				if self.wval < 0
 					self.wval += 256
 				end
-				self.setflags(Flag::Z, !self.wval)
+				self.setflags(Flag::Z, self.wval == 0)
 				self.setflags(Flag::N, self.wval & 0x80)
 				self.setflags(Flag::C, self.a >= self.bval)
 			when Inst::CPX
@@ -380,7 +375,7 @@ module Mos6510
 				if self.wval < 0
 					self.wval += 256
 				end
-				self.setflags(Flag::Z, !self.wval)
+				self.setflags(Flag::Z, self.wval == 0)
 				self.setflags(Flag::N, self.wval & 0x80)
 				self.setflags(Flag::C, self.x >= self.bval)
 			when Inst::CPY
@@ -390,7 +385,7 @@ module Mos6510
 				if self.wval < 0
 					self.wval += 256
 				end
-				self.setflags(Flag::Z, !self.wval)
+				self.setflags(Flag::Z, self.wval == 0)
 				self.setflags(Flag::N, self.wval & 0x80)
 				self.setflags(Flag::C, self.y >= self.bval)
 			when Inst::DEC
@@ -401,7 +396,7 @@ module Mos6510
 					self.bval += 256
 				end
 				self.setaddr(addr, self.bval)
-				self.setflags(Flag::Z, !self.bval)
+				self.setflags(Flag::Z, self.bval == 0)
 				self.setflags(Flag::N, self.bval & 0x80)
 			when Inst::DEX
 				self.cycles += 2
@@ -410,7 +405,7 @@ module Mos6510
 				if self.x < 0
 					self.x += 256
 				end
-				self.setflags(Flag::Z, !self.x)
+				self.setflags(Flag::Z, self.x == 0)
 				self.setflags(Flag::N, self.x & 0x80)
 			when Inst::DEY
 				self.cycles += 2
@@ -419,31 +414,31 @@ module Mos6510
 				if self.y < 0
 					self.y += 256
 				end
-				self.setflags(Flag::Z, !self.y)
+				self.setflags(Flag::Z, self.y == 0)
 				self.setflags(Flag::N, self.y & 0x80)
 			when Inst::EOR
 				self.bval = self.getaddr(addr)
 				self.a ^= self.bval
-				self.setflags(Flag::Z, !self.a)
+				self.setflags(Flag::Z, self.a == 0)
 				self.setflags(Flag::N, self.a & 0x80)
 			when Inst::INC
 				self.bval = self.getaddr(addr)
 				self.bval += 1
 				self.bval &= 0xff
 				self.setaddr(addr, self.bval)
-				self.setflags(Flag::Z, !self.bval)
+				self.setflags(Flag::Z, self.bval == 0)
 				self.setflags(Flag::N, self.bval & 0x80)
 			when Inst::INX
 				self.cycles += 2
 				self.x += 1
 				self.x &= 0xff
-				self.setflags(Flag::Z, !self.x)
+				self.setflags(Flag::Z, self.x == 0)
 				self.setflags(Flag::N, self.x & 0x80)
 			when Inst::INY
 				self.cycles += 2
 				self.y += 1
 				self.y &= 0xff
-				self.setflags(Flag::Z, !self.y)
+				self.setflags(Flag::Z, self.y == 0)
 				self.setflags(Flag::N, self.y & 0x80)
 			when Inst::JMP
 				self.cycles += 3
@@ -466,22 +461,22 @@ module Mos6510
 				self.pc = self.wval
 			when Inst::LDA
 				self.a = self.getaddr(addr)
-				self.setflags(Flag::Z, !self.a)
+				self.setflags(Flag::Z, self.a == 0)
 				self.setflags(Flag::N, self.a & 0x80)
 			when Inst::LDX
 				self.x = self.getaddr(addr)
-				self.setflags(Flag::Z, !self.x)
+				self.setflags(Flag::Z, self.x == 0)
 				self.setflags(Flag::N, self.x & 0x80)
 			when Inst::LDY
 				self.y = self.getaddr(addr)
-				self.setflags(Flag::Z, !self.y)
+				self.setflags(Flag::Z, self.y == 0)
 				self.setflags(Flag::N, self.y & 0x80)
 			when Inst::LSR
 				self.bval = self.getaddr(addr)
 				self.wval = self.bval
 				self.wval >>= 1
 				self.setaddr(addr, self.wval & 0xff)
-				self.setflags(Flag::Z, !self.wval)
+				self.setflags(Flag::Z, self.wval == 0)
 				self.setflags(Flag::N, self.wval & 0x80)
 				self.setflags(Flag::C, self.bval & 1)
 			when Inst::NOP
@@ -489,7 +484,7 @@ module Mos6510
 			when Inst::ORA
 				self.bval = self.getaddr(addr)
 				self.a |= self.bval
-				self.setflags(Flag::Z, !self.a)
+				self.setflags(Flag::Z, self.a == 0)
 				self.setflags(Flag::N, self.a & 0x80)
 			when Inst::PHA
 				self.push(self.a)
@@ -499,8 +494,8 @@ module Mos6510
 				self.cycles += 3
 			when Inst::PLA
 				self.a = self.pop
-				self.setflags(Z, !self.a)
-				self.setflags(N, self.a & 0x80)
+				self.setflags(Flag::Z, self.a == 0)
+				self.setflags(Flag::N, self.a & 0x80)
 				self.cycles += 4
 			when Inst::PLP
 				self.p = self.pop
@@ -514,7 +509,7 @@ module Mos6510
 				self.bval &= 0xff
 				self.setaddr(addr, self.bval)
 				self.setflags(Flag::N, self.bval & 0x80)
-				self.setflags(Flag::Z, !self.bval)
+				self.setflags(Flag::Z, self.bval == 0)
 			when Inst::ROR
 				self.bval = self.getaddr(addr)
 				c = (self.p & Flag::C) != 0 ? 128 : 0
@@ -523,7 +518,7 @@ module Mos6510
 				self.bval |= c
 				self.setaddr(addr, self.bval)
 				self.setflags(Flag::N, self.bval & 0x80)
-				self.setflags(Flag::Z, !self.bval)
+				self.setflags(Flag::Z, self.bval == 0)
 			when Inst::RTI
 				# treat like RTS
 			when Inst::RTS
@@ -533,10 +528,10 @@ module Mos6510
 				self.cycles += 6
 			when Inst::SBC
 				self.bval = self.getaddr(addr) ^ 0xff
-				self.wval = self.a + self.bval + ((self.p & jsSID.MOS6510.Flag::C) != 0 ? 1 : 0)
+				self.wval = self.a + self.bval + ((self.p & Flag::C) != 0 ? 1 : 0)
 				self.setflags(Flag::C, self.wval & 0x100)
 				self.a = self.wval & 0xff
-				self.setflags(Flag::Z, !self.a)
+				self.setflags(Flag::Z, self.a == 0)
 				self.setflags(Flag::N, self.a > 127)
 				self.setflags(Flag::V, ((self.p & Flag::C) != 0 ? 1 : 0) ^ ((self.p & Flag::N) != 0 ? 1 : 0))
 			when Inst::SEC
@@ -557,22 +552,22 @@ module Mos6510
 			when Inst::TAX
 				self.cycles += 2
 				self.x = self.a
-				self.setflags(Flag::Z, !self.x)
+				self.setflags(Flag::Z, self.x == 0)
 				self.setflags(Flag::N, self.x & 0x80)
 			when Inst::TAY
 				self.cycles += 2
 				self.y = self.a
-				self.setflags(Flag::Z, !self.y)
+				self.setflags(Flag::Z, self.y == 0)
 				self.setflags(Flag::N, self.y & 0x80)
 			when Inst::TSX
 				self.cycles += 2
 				self.x = self.s
-				self.setflags(Flag::Z, !self.x)
+				self.setflags(Flag::Z, self.x == 0)
 				self.setflags(Flag::N, self.x & 0x80)
 			when Inst::TXA
 				self.cycles += 2
 				self.a = self.x
-				self.setflags(Flag::Z, !self.a)
+				self.setflags(Flag::Z, self.a == 0)
 				self.setflags(Flag::N, self.a & 0x80)
 			when Inst::TXS
 				self.cycles += 2
@@ -580,7 +575,7 @@ module Mos6510
 			when Inst::TYA
 				self.cycles += 2
 				self.a = self.y
-				self.setflags(Flag::Z, !self.a)
+				self.setflags(Flag::Z, self.a == 0)
 				self.setflags(Flag::N, self.a & 0x80)
 			else
 				puts "cpuParse: attempted unhandled instruction, opcode: #{opc}"

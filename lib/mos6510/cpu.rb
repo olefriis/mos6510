@@ -24,7 +24,7 @@ module Mos6510
         EOS
 
         if sid
-          @context.attach("sidPoke", proc{ |address, value| sid.poke(address, value) })
+          @context.attach("sidPoke", proc { |address, value| sid.poke(address, value) })
           @context.eval <<~EOS
             sid = {
               poke: function(address, value) { sidPoke(address, value); }
@@ -71,7 +71,7 @@ module Mos6510
       if use_javascript_adapter
         @context.eval "cpu.mem[#{address}]"
       else
-        @memory[address]
+        @cpu.getmem(address)
       end
     end
   end
