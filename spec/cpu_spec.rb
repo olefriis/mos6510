@@ -21,7 +21,7 @@ module Mos6510
       # bin_files/6502_functional_test.bin from https://github.com/Klaus2m5/6502_65C02_functional_tests
       # (and even then, it ends up on the wrong PC)
       image = File.read(File.join(__dir__, '6502_functional_test.bin')).bytes
-      cpu = Cpu.new(use_javascript_adapter: true)
+      cpu = Cpu.new
       cpu.load(image)
       cpu.start
       cpu.pc = 0x400

@@ -1,3 +1,5 @@
+# This file is a pretty raw conversion of js/jssid.mos6510.js from
+# https://github.com/jhohertz/jsSID
 
 module Mos6510
 	class Mos6510
