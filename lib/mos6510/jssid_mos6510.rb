@@ -12,7 +12,7 @@ module Mos6510
 			self.mem = mem
 			self.sid = sid
 
-			self.cpuReset()
+			self.reset
 		end
 
 		def getmem(addr)
@@ -269,7 +269,7 @@ module Mos6510
 			end
 		end
 
-		def cpuReset
+		def reset
 			self.a	= 0
 			self.x	= 0
 			self.y	= 0
@@ -279,16 +279,7 @@ module Mos6510
 			self.pc |= 256 * self.getmem(0xfffd)
 		end
 
-		def cpuResetTo(npc, na)
-			self.a	= na || 0
-			self.x	= 0
-			self.y	= 0
-			self.p	= 0
-			self.s	= 255
-			self.pc	= npc
-		end
-
-		def cpuParse
+		def step
 			c = nil # Is this ever used?
 			self.cycles = 0
 
@@ -578,13 +569,13 @@ module Mos6510
 				self.setflags(Flag::Z, self.a == 0)
 				self.setflags(Flag::N, self.a & 0x80)
 			else
-				puts "cpuParse: attempted unhandled instruction, opcode: #{opc}"
+				puts "step: attempted unhandled instruction, opcode: #{opc}"
 			end
 
 			self.cycles
 		end
 
-		def cpuJSR(npc, na)
+		def jsr(npc, na)
 			ccl = 0
 
 			self.a = na
@@ -597,7 +588,7 @@ module Mos6510
 			self.push(0)
 
 			while self.pc > 1
-				ccl += self.cpuParse()
+				ccl += self.step
 			end
 
 			ccl

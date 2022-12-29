@@ -4,7 +4,7 @@ module Mos6510
   class Cpu
     attr_reader :use_javascript_adapter
 
-    def initialize(sid: nil, use_javascript_adapter: true)
+    def initialize(sid: nil, use_javascript_adapter: false)
       @use_javascript_adapter = use_javascript_adapter
 
       if use_javascript_adapter
@@ -63,7 +63,31 @@ module Mos6510
       if use_javascript_adapter
         @context.eval "cpu.cpuJSR(#{address}, #{accumulator_value});"
       else
-        @cpu.cpuJSR(address, accumulator_value)
+        @cpu.jsr(address, accumulator_value)
+      end
+    end
+
+    def step
+      if use_javascript_adapter
+        @context.eval "cpu.cpuParse();"
+      else
+        @cpu.step
+      end
+    end
+
+    def pc
+      if use_javascript_adapter
+        @context.eval "cpu.pc"
+      else
+        @cpu.pc
+      end
+    end
+
+    def pc=(new_pc)
+      if use_javascript_adapter
+        @context.eval "cpu.pc = #{new_pc};"
+      else
+        @cpu.pc = new_pc
       end
     end
 
