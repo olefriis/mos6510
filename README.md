@@ -7,9 +7,10 @@ Additionally, the gem allows you to supply an object which simulates the SID pro
 (Sound Interface Device - the sound chip from the Commodore 64). This object will receive
 `poke` calls whenever the simulated program writes to the addresses mapped to the SID.
 
-Be warned: This gem is a HUGE hack! Basically it is just wrapping a MOS 6510 simulator
-stolen (*) from the [jsSID](https://github.com/jhohertz/jsSID) project. I'd love to do a
-pure-Ruby implementation one day, but just needed a MOS 6510 emulator for another project.
+Be warned: This is just a very raw conversion of a JavaScript implementation stolen (*)
+from the [jsSID](https://github.com/jhohertz/jsSID) project. It has bugs, probably
+because of my conversion. I'd love fix this one day, but just needed a MOS 6510 emulator
+for another project.
 
 (*) This explains the GPL v2 license of this project.
 

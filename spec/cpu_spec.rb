@@ -16,6 +16,28 @@ module Mos6510
       expect(cpu.peek(4000)).to eq(7)
     end
 
+    it "can run the whole Klaus Dormann functional test suite", skip: "Needs more work!" do
+      # TODO: This suite does _not_ pass currently. It relies on you copying
+      # bin_files/6502_functional_test.bin from https://github.com/Klaus2m5/6502_65C02_functional_tests
+      # (and even then, it ends up on the wrong PC)
+      image = File.read(File.join(__dir__, '6502_functional_test.bin')).bytes
+      cpu = Cpu.new
+      cpu.load(image)
+      cpu.start
+      cpu.pc = 0x400
+
+      last_pc = 0
+      while last_pc != cpu.pc
+        last_pc = cpu.pc
+        #puts cpu.inspect
+
+        puts "Stepping: #{last_pc}"
+        cpu.step
+      end
+
+      expect(last_pc).to eq(0x3469)
+    end
+
     it 'can do callbacks to SID object' do
       # The SID is mapped to the memory starting at position 54272
       code = [
