@@ -275,7 +275,7 @@ module Mos6510
 			self.a	= 0
 			self.x	= 0
 			self.y	= 0
-			self.p	= 0
+			self.p	= Flag::B1 | Flag::B2
 			self.s	= 255
 			self.pc	= self.getmem(0xfffc)
 			self.pc |= 256 * self.getmem(0xfffd)
@@ -291,12 +291,16 @@ module Mos6510
 
 			case cmd
 			when Inst::ADC
-				self.wval = self.a + self.getaddr(addr) + ((self.p & Flag::C) != 0 ? 1 : 0)
+				value = self.getaddr(addr)
+				carry = (self.p & Flag::C) != 0 ? 1 : 0
+				self.wval = self.a + value + ((self.p & Flag::C) != 0 ? 1 : 0)
+				v = (((self.a & 0x7f) + (value & 0x7f) + carry) >> 7) ^ (self.wval >> 8)
 				self.setflags(Flag::C, self.wval & 0x100)
 				self.a = self.wval & 0xff
 				self.setflags(Flag::Z, self.a == 0)
 				self.setflags(Flag::N, self.a & 0x80)
-				self.setflags(Flag::V, ((self.p & Flag::C) != 0 ? 1 : 0) ^ ((self.p & Flag::N) != 0 ? 1 : 0))
+				#puts "ADC setting v: #{v} (value=#{value}, carry=#{carry}, a=#{self.a}, wval=#{self.wval})"
+				self.setflags(Flag::V, v)
 			when Inst::AND
 				self.bval = self.getaddr(addr)
 				self.a &= self.bval
@@ -331,14 +335,12 @@ module Mos6510
 				self.setflags(Flag::N, self.bval & 0x80)
 				self.setflags(Flag::V, self.bval & 0x40)
 			when Inst::BRK
-				pc = 0	# just quit per rockbox
-				#self.push(self.pc & 0xff);
-				#self.push(self.pc >> 8);
-				#self.push(self.p);
-				#self.setflags(jsSID.MOS6510.Flag::B, 1);
-				# FIXME: should Z be set as well?
-				#self.pc = self.getmem(0xfffe);
-				#self.cycles += 7;
+				self.push(self.pc >> 8)
+				self.push(self.pc & 0xff)
+				self.push(self.p)
+				self.setflags(Flag::B1, 1)
+				self.pc = self.getmem(0xfffe)
+				self.cycles += 7
 			when Inst::CLC
 				self.cycles += 2
 				self.setflags(Flag::C, 0)
@@ -491,7 +493,7 @@ module Mos6510
 				self.setflags(Flag::N, self.a & 0x80)
 				self.cycles += 4
 			when Inst::PLP
-				self.p = self.pop
+				self.p = self.pop | Flag::B1 | Flag::B2
 				self.cycles += 4
 			when Inst::ROL
 				self.bval = self.getaddr(addr)
@@ -583,7 +585,7 @@ module Mos6510
 			self.a = na
 			self.x = 0
 			self.y = 0
-			self.p = 0
+			self.p = Flag::B1 | Flag::B2
 			self.s = 255
 			self.pc = npc
 			self.push(0)
@@ -598,7 +600,7 @@ module Mos6510
 
 		# Flags Enum
 		module Flag
-			N = 128; V = 64; B = 16; D = 8; I = 4; Z = 2; C = 1
+			N = 128; V = 64; B2 = 32; B1 = 16; D = 8; I = 4; Z = 2; C = 1
 		end
 
 		# Opcodes Enum

@@ -31,6 +31,20 @@ module Mos6510
       @cpu.pc = new_pc
     end
 
+    def inspect
+      status = @cpu.p
+      status_encoded = [
+        (status & Mos6510::Flag::N) != 0, (status & Mos6510::Flag::V) != 0, (status & Mos6510::Flag::B2) != 0, (status & Mos6510::Flag::B1) != 0, (status & Mos6510::Flag::D) != 0,
+        (status & Mos6510::Flag::I) != 0, (status & Mos6510::Flag::Z) != 0, (status & Mos6510::Flag::C) != 0
+      ].reduce(0) { |acc, flag| (acc << 1) + (flag ? 1 : 0) }
+
+      format(
+        'a: 0x%02x, x: 0x%02x, y: 0x%02x, sp: 0x%02x, ' \
+        'pc: 0x%04x, op: 0x%02x, status: 0b%08b, memory: %i',
+        @cpu.a, @cpu.x, @cpu.y, @cpu.s, @cpu.pc, @cpu.getmem(@cpu.pc), status_encoded, @memory.sum
+      )
+    end
+
     def peek(address)
       @cpu.getmem(address)
     end
