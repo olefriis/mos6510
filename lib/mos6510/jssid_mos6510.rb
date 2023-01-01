@@ -238,15 +238,11 @@ module Mos6510
 
 		def push(val)
 			self.setmem(0x100 + self.s, val)
-			if self.s > 0
-				self.s -= 1
-			end
+			self.s = (self.s - 1) & 0xff
 		end
 
 		def pop
-			if self.s < 0xff
-				self.s += 1
-			end
+			self.s = (self.s + 1) & 0xff
 			self.getmem(0x100 + self.s)
 		end
 
@@ -293,13 +289,12 @@ module Mos6510
 			when Inst::ADC
 				value = self.getaddr(addr)
 				carry = (self.p & Flag::C) != 0 ? 1 : 0
-				self.wval = self.a + value + ((self.p & Flag::C) != 0 ? 1 : 0)
+				self.wval = self.a + value + carry
 				v = (((self.a & 0x7f) + (value & 0x7f) + carry) >> 7) ^ (self.wval >> 8)
 				self.setflags(Flag::C, self.wval & 0x100)
 				self.a = self.wval & 0xff
 				self.setflags(Flag::Z, self.a == 0)
 				self.setflags(Flag::N, self.a & 0x80)
-				#puts "ADC setting v: #{v} (value=#{value}, carry=#{carry}, a=#{self.a}, wval=#{self.wval})"
 				self.setflags(Flag::V, v)
 			when Inst::AND
 				self.bval = self.getaddr(addr)
@@ -335,11 +330,13 @@ module Mos6510
 				self.setflags(Flag::N, self.bval & 0x80)
 				self.setflags(Flag::V, self.bval & 0x40)
 			when Inst::BRK
+				self.pcinc()
 				self.push(self.pc >> 8)
 				self.push(self.pc & 0xff)
 				self.push(self.p)
-				self.setflags(Flag::B1, 1)
-				self.pc = self.getmem(0xfffe)
+				self.setflags(Flag::B1, true)
+				self.setflags(Flag::I, true)
+				self.pc = self.getmem(0xfffe) + (self.getmem(0xffff) << 8)
 				self.cycles += 7
 			when Inst::CLC
 				self.cycles += 2
@@ -515,20 +512,25 @@ module Mos6510
 				self.setflags(Flag::N, self.bval & 0x80)
 				self.setflags(Flag::Z, self.bval == 0)
 			when Inst::RTI
-				# treat like RTS
+				self.p = self.pop
+				self.pc = self.pop + (self.pop << 8)
+				self.cycles += 6
 			when Inst::RTS
 				self.wval = self.pop
 				self.wval |= 256 * self.pop
 				self.pc = self.wval + 1
 				self.cycles += 6
 			when Inst::SBC
-				self.bval = self.getaddr(addr) ^ 0xff
-				self.wval = self.a + self.bval + ((self.p & Flag::C) != 0 ? 1 : 0)
+				# Almost identical to SBC, just inverting value
+				value = self.getaddr(addr) ^ 0xff
+				carry = (self.p & Flag::C) != 0 ? 1 : 0
+				self.wval = self.a + value + carry
+				v = (((self.a & 0x7f) + (value & 0x7f) + carry) >> 7) ^ (self.wval >> 8)
 				self.setflags(Flag::C, self.wval & 0x100)
 				self.a = self.wval & 0xff
 				self.setflags(Flag::Z, self.a == 0)
-				self.setflags(Flag::N, self.a > 127)
-				self.setflags(Flag::V, ((self.p & Flag::C) != 0 ? 1 : 0) ^ ((self.p & Flag::N) != 0 ? 1 : 0))
+				self.setflags(Flag::N, self.a & 0x80)
+				self.setflags(Flag::V, v)
 			when Inst::SEC
 				self.cycles += 2
 				self.setflags(Flag::C, 1)
