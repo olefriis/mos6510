@@ -289,13 +289,24 @@ module Mos6510
 			when Inst::ADC
 				value = self.getaddr(addr)
 				carry = (self.p & Flag::C) != 0 ? 1 : 0
-				self.wval = self.a + value + carry
-				v = (((self.a & 0x7f) + (value & 0x7f) + carry) >> 7) ^ (self.wval >> 8)
-				self.setflags(Flag::C, self.wval & 0x100)
+				if (self.p & Flag::D) != 0
+					value_bcd = (value & 0xf) + (value >> 4 & 0xf) * 10
+					a_bcd = (self.a & 0xf) + (self.a >> 4 & 0xf) * 10
+					sum = value_bcd + a_bcd + carry
+					self.wval = (sum % 10) + (((sum / 10) % 10) << 4) + ((sum / 100) << 8)
+					self.setflags(Flag::C, sum >= 100)
+					self.setflags(Flag::V, self.wval > 127 || self.wval < -128)
+				else
+					self.wval = self.a + value + carry
+					v = (((self.a & 0x7f) + (value & 0x7f) + carry) >> 7) ^ (self.wval >> 8)
+					# TODO: Shouldn't this work?
+					#v = self.wval > 127 || self.wval < -128
+					self.setflags(Flag::C, self.wval & 0x100)
+					self.setflags(Flag::V, v)
+				end
 				self.a = self.wval & 0xff
-				self.setflags(Flag::Z, self.a == 0)
 				self.setflags(Flag::N, self.a & 0x80)
-				self.setflags(Flag::V, v)
+				self.setflags(Flag::Z, self.a == 0)
 			when Inst::AND
 				self.bval = self.getaddr(addr)
 				self.a &= self.bval
