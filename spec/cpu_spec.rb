@@ -16,7 +16,7 @@ module Mos6510
       expect(cpu.peek(4000)).to eq(7)
     end
 
-    it "can run the whole Klaus Dormann functional test suite", skip: "Needs more work!" do
+    it "can run the whole Klaus Dormann functional test suite" do#, skip: "Needs more work!" do
       # TODO: This suite does _not_ pass currently. It relies on you copying
       # bin_files/6502_functional_test.bin from https://github.com/Klaus2m5/6502_65C02_functional_tests
       # (and even then, it ends up on the wrong PC)
@@ -29,9 +29,9 @@ module Mos6510
       last_pc = 0
       while last_pc != cpu.pc
         last_pc = cpu.pc
-        #puts cpu.inspect
+        puts cpu.inspect
 
-        puts "Stepping: #{last_pc}"
+        #puts "Stepping: #{last_pc}"
         cpu.step
       end
 
